@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { transform } from '../math/lorentz'
 import { polylinePath } from '../utils/plot'
+import { exportAsPng, exportAsJpg, exportAsPdf } from '../utils/export'
 
 const WIDTH = 760
 const HEIGHT = 760
@@ -36,6 +37,7 @@ export default function MinkowskiDiagram({
   onUpdateLineEndpoint,
 }) {
   const svgRef = useRef(null)
+  const [exporting, setExporting] = useState(false)
   const dragStartRef = useRef(null)
   const dragTargetRef = useRef(null)
   const movedRef = useRef(false)
@@ -287,6 +289,18 @@ export default function MinkowskiDiagram({
     setDragCurrent(null)
   }
 
+  async function handleExport(format) {
+    if (!svgRef.current || exporting) return
+    setExporting(true)
+    try {
+      if (format === 'png') await exportAsPng(svgRef.current)
+      else if (format === 'jpg') await exportAsJpg(svgRef.current)
+      else if (format === 'pdf') await exportAsPdf(svgRef.current)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <section className="plot-layout">
       <section className="plot-shell">
@@ -523,6 +537,33 @@ export default function MinkowskiDiagram({
           ct′
         </text>
         </svg>
+        <div className="export-toolbar">
+          <span className="export-label">Save as:</span>
+          <button
+            type="button"
+            className="export-btn"
+            onClick={() => handleExport('png')}
+            disabled={exporting}
+          >
+            PNG
+          </button>
+          <button
+            type="button"
+            className="export-btn"
+            onClick={() => handleExport('jpg')}
+            disabled={exporting}
+          >
+            JPG
+          </button>
+          <button
+            type="button"
+            className="export-btn"
+            onClick={() => handleExport('pdf')}
+            disabled={exporting}
+          >
+            PDF
+          </button>
+        </div>
       </section>
 
       <aside className="coordinates-panel" aria-live="polite">
