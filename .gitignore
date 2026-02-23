@@ -1,0 +1,14 @@
+# all pdf files
+*.pdf
+# all .jpg files
+*.jpg
+# all __pycache__ folders__pycache__/
+__pycache__/
+# all .ipynb_checkpoints folders.ipynb_checkpoints/
+.ipynb_checkpoints/
+# all .vscode folders
+.vscode/
+
+# web app dependencies and output
+node_modules/
+dist/
