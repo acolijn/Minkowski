@@ -29,16 +29,18 @@ export default function MinkowskiDiagram({
   toScreenY,
   eventPoints,
   eventLines,
-  readout,
   onAddPoint,
   onAddLine,
   onDeletePoint,
-  onReadPoint,
+  onUpdatePoint,
+  onUpdateLineEndpoint,
 }) {
   const svgRef = useRef(null)
   const dragStartRef = useRef(null)
+  const dragTargetRef = useRef(null)
   const movedRef = useRef(false)
   const [dragCurrent, setDragCurrent] = useState(null)
+  const [cursorReadout, setCursorReadout] = useState(null)
   const [hoveredPointReadout, setHoveredPointReadout] = useState(null)
   const [hoveredLineInvariant, setHoveredLineInvariant] = useState(null)
   const gamma = 1 / Math.sqrt(1 - beta * beta)
@@ -124,6 +126,23 @@ export default function MinkowskiDiagram({
     })
   }
 
+  function setCoordinateReadout(point) {
+    if (!point) {
+      setCursorReadout(null)
+      return
+    }
+
+    const transformed = transform({ ct: point.ct, x: point.x, beta })
+
+    setCursorReadout({
+      s: point,
+      sPrime: {
+        x: transformed.x,
+        ct: transformed.ct,
+      },
+    })
+  }
+
   function toWorldPoint(clientX, clientY) {
     if (!svgRef.current) {
       return null
@@ -152,6 +171,8 @@ export default function MinkowskiDiagram({
       return
     }
 
+    event.preventDefault()
+
     const start = toWorldPoint(event.clientX, event.clientY)
     if (!start) {
       return
@@ -161,15 +182,69 @@ export default function MinkowskiDiagram({
     dragStartRef.current = start
     movedRef.current = false
     setDragCurrent(start)
+    setCoordinateReadout(start)
   }
 
-  function handlePointerMove(event) {
-    if (!dragStartRef.current || (event.buttons & 1) !== 1) {
+  function startPointDrag(event, index) {
+    if (event.button !== 0) {
       return
     }
 
+    event.stopPropagation()
+
+    if (event.detail === 2) {
+      dragTargetRef.current = null
+      setHoveredPointReadout(null)
+      onDeletePoint(index)
+      return
+    }
+
+    dragTargetRef.current = { type: 'point', index }
+    movedRef.current = true
+    svgRef.current?.setPointerCapture(event.pointerId)
+  }
+
+  function startLineEndpointDrag(event, index, endpoint) {
+    if (event.button !== 0) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    dragTargetRef.current = { type: 'line-endpoint', index, endpoint }
+    movedRef.current = true
+    svgRef.current?.setPointerCapture(event.pointerId)
+  }
+
+  function handlePointerMove(event) {
     const current = toWorldPoint(event.clientX, event.clientY)
+
+    if (dragTargetRef.current) {
+      if (!current) {
+        return
+      }
+
+      setCoordinateReadout(current)
+
+      if (dragTargetRef.current.type === 'point') {
+        onUpdatePoint(dragTargetRef.current.index, current)
+        return
+      }
+
+      onUpdateLineEndpoint(dragTargetRef.current.index, dragTargetRef.current.endpoint, current)
+      return
+    }
+
     if (!current) {
+      if (!dragStartRef.current) {
+        setCoordinateReadout(null)
+      }
+      return
+    }
+
+    setCoordinateReadout(current)
+
+    if (!dragStartRef.current || (event.buttons & 1) !== 1) {
       return
     }
 
@@ -183,7 +258,16 @@ export default function MinkowskiDiagram({
   }
 
   function handlePointerUp(event) {
-    if (event.button !== 0 || !dragStartRef.current) {
+    if (event.button !== 0) {
+      return
+    }
+
+    if (dragTargetRef.current) {
+      dragTargetRef.current = null
+      return
+    }
+
+    if (!dragStartRef.current) {
       return
     }
 
@@ -196,42 +280,30 @@ export default function MinkowskiDiagram({
       onAddPoint(start)
     }
 
+    setCoordinateReadout(end)
+
     dragStartRef.current = null
     movedRef.current = false
     setDragCurrent(null)
   }
 
-  function handleContextMenu(event) {
-    event.preventDefault()
-
-    const point = toWorldPoint(event.clientX, event.clientY)
-    if (!point) {
-      return
-    }
-
-    const transformed = transform({ ct: point.ct, x: point.x, beta })
-
-    onReadPoint({
-      s: point,
-      sPrime: {
-        x: transformed.x,
-        ct: transformed.ct,
-      },
-    })
-  }
-
   return (
-    <section className="plot-shell">
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        role="img"
-        aria-label="Minkowski diagram"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onContextMenu={handleContextMenu}
-      >
+    <section className="plot-layout">
+      <section className="plot-shell">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          role="img"
+          aria-label="Minkowski diagram"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={() => {
+            if (!dragStartRef.current) {
+              setCoordinateReadout(null)
+            }
+          }}
+        >
         <defs>
           <clipPath id="plot-clip">
             <rect x={PADDING} y={PADDING} width={PLOT_WIDTH} height={PLOT_HEIGHT} />
@@ -312,7 +384,7 @@ export default function MinkowskiDiagram({
               r={5}
               className="event-point"
               onPointerDown={(event) => {
-                event.stopPropagation()
+                startPointDrag(event, index)
               }}
               onMouseEnter={() => {
                 handlePointHover(point)
@@ -320,13 +392,32 @@ export default function MinkowskiDiagram({
               onMouseLeave={() => {
                 setHoveredPointReadout(null)
               }}
-              onDoubleClick={(event) => {
-                event.stopPropagation()
-                onDeletePoint(index)
-              }}
             >
               <title>Double-click to delete point</title>
             </circle>
+          ))}
+
+          {eventLines.map((line, index) => (
+            <React.Fragment key={`event-line-endpoints-${index}`}>
+              <circle
+                cx={toSvgX(line.start.x)}
+                cy={toSvgY(line.start.ct)}
+                r={4}
+                className="event-endpoint"
+                onPointerDown={(event) => {
+                  startLineEndpointDrag(event, index, 'start')
+                }}
+              />
+              <circle
+                cx={toSvgX(line.end.x)}
+                cy={toSvgY(line.end.ct)}
+                r={4}
+                className="event-endpoint"
+                onPointerDown={(event) => {
+                  startLineEndpointDrag(event, index, 'end')
+                }}
+              />
+            </React.Fragment>
           ))}
         </g>
 
@@ -419,19 +510,6 @@ export default function MinkowskiDiagram({
           </>
         )}
 
-        {readout && (
-          <>
-            <circle cx={toSvgX(readout.s.x)} cy={toSvgY(readout.s.ct)} r={6} className="readout-point" />
-            <rect x={14} y={14} width={300} height={68} rx={8} className="readout-box" />
-            <text x={24} y={40} className="readout-text">
-              S: (x, ct) = ({readout.s.x.toFixed(2)}, {readout.s.ct.toFixed(2)})
-            </text>
-            <text x={24} y={66} className="readout-text">
-              S′: (x′, ct′) = ({readout.sPrime.x.toFixed(2)}, {readout.sPrime.ct.toFixed(2)})
-            </text>
-          </>
-        )}
-
         <text x={toSvgX(range + 0.3)} y={toSvgY(0)} className="axis-label margin-label">
           x
         </text>
@@ -444,7 +522,26 @@ export default function MinkowskiDiagram({
         <text x={toSvgX(ctPrimeLabel.x)} y={toSvgY(ctPrimeLabel.ct)} className="prime-label margin-label">
           ct′
         </text>
-      </svg>
+        </svg>
+      </section>
+
+      <aside className="coordinates-panel" aria-live="polite">
+        <h2>Coordinates</h2>
+        {cursorReadout ? (
+          <>
+            <p className="coordinates-row">
+              <span className="coordinates-label">S:</span>
+              <span>(x, ct) = ({cursorReadout.s.x.toFixed(2)}, {cursorReadout.s.ct.toFixed(2)})</span>
+            </p>
+            <p className="coordinates-row coordinates-row-prime">
+              <span className="coordinates-label">S′:</span>
+              <span>(x′, ct′) = ({cursorReadout.sPrime.x.toFixed(2)}, {cursorReadout.sPrime.ct.toFixed(2)})</span>
+            </p>
+          </>
+        ) : (
+          <p className="coordinates-empty">Move over the diagram</p>
+        )}
+      </aside>
     </section>
   )
 }
