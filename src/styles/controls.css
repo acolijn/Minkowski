@@ -6,21 +6,59 @@
   margin-bottom: 1rem;
 }
 
-.controls label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-}
-
-.controls input[type='range'] {
-  width: 100%;
-}
-
-.values {
-  margin-top: 0.55rem;
+.frame-toggle {
   display: flex;
-  gap: 1.2rem;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.frame-toggle-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.frame-toggle-btn {
+  border: 2px solid #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 0.35rem 0.85rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.frame-toggle-btn:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.frame-toggle-info {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.45rem;
+}
+
+.slider-row label {
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 5.5rem;
   font-variant-numeric: tabular-nums;
+}
+
+.slider-row input[type='range'] {
+  flex: 1;
 }
 
 .control-actions {

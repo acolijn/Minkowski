@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import ControlsPanel from './components/ControlsPanel'
 import MinkowskiDiagram from './components/MinkowskiDiagram'
 import { buildPrimeGridLines, buildSGridLines, computePrimeExtent } from './math/diagram'
-import { ctPrimeAxis, gammaFromBeta, xPrimeAxis } from './math/lorentz'
+import { ctPrimeAxis, gammaFromBeta, transform, xPrimeAxis } from './math/lorentz'
 import { createPlotTransform } from './utils/plot'
 
 const WIDTH = 760
@@ -14,6 +14,7 @@ export default function App() {
   const [range, setRange] = useState(5)
   const [eventPoints, setEventPoints] = useState([])
   const [eventLines, setEventLines] = useState([])
+  const [restFrame, setRestFrame] = useState('S')
 
   const gamma = useMemo(() => gammaFromBeta(beta), [beta])
   const xPrime = useMemo(() => xPrimeAxis(beta, -range, range), [beta, range])
@@ -35,6 +36,23 @@ export default function App() {
     return createPlotTransform({ range, width: WIDTH, height: HEIGHT })
   }, [range])
 
+  const handleFrameToggle = useCallback(() => {
+    const transformPoint = (point) => {
+      const result = transform({ ct: point.ct, x: point.x, beta })
+      return { x: result.x, ct: result.ct }
+    }
+
+    setEventPoints((previous) => previous.map(transformPoint))
+    setEventLines((previous) =>
+      previous.map((line) => ({
+        start: transformPoint(line.start),
+        end: transformPoint(line.end),
+      }))
+    )
+    setBeta(-beta)
+    setRestFrame((previous) => (previous === 'S' ? 'SPrime' : 'S'))
+  }, [beta])
+
   return (
     <main className="app">
       <h1>Minkowski Diagram</h1>
@@ -43,8 +61,10 @@ export default function App() {
         beta={beta}
         gamma={gamma}
         range={range}
+        restFrame={restFrame}
         onBetaChange={setBeta}
         onRangeChange={setRange}
+        onFrameToggle={handleFrameToggle}
         onClearPoints={() => {
           setEventPoints([])
         }}
@@ -60,6 +80,7 @@ export default function App() {
       <MinkowskiDiagram
         range={range}
         beta={beta}
+        restFrame={restFrame}
         sGridLines={sGridLines}
         primeGridLines={primeGridLines}
         xPrime={xPrime}

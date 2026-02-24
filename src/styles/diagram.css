@@ -34,7 +34,11 @@
   line-height: 1.35;
 }
 
-.coordinates-row-prime {
+.coordinates-row-s {
+  color: #111827;
+}
+
+.coordinates-row-sprime {
   color: #dc2626;
 }
 

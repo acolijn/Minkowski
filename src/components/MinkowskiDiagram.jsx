@@ -10,18 +10,20 @@ const PLOT_WIDTH = WIDTH - 2 * PADDING
 const PLOT_HEIGHT = HEIGHT - 2 * PADDING
 
 function lineClass(kind, frame) {
+  const isSprime = frame === 'sprime'
   if (kind === 'axis') {
-    return frame === 'prime' ? 'prime-axis' : 'axis'
+    return isSprime ? 'prime-axis' : 'axis'
   }
   if (kind === 'time') {
-    return frame === 'prime' ? 'prime-time-grid' : 'time-grid'
+    return isSprime ? 'prime-time-grid' : 'time-grid'
   }
-  return frame === 'prime' ? 'prime-grid' : 'grid'
+  return isSprime ? 'prime-grid' : 'grid'
 }
 
 export default function MinkowskiDiagram({
   range,
   beta,
+  restFrame,
   sGridLines,
   primeGridLines,
   xPrime,
@@ -114,14 +116,33 @@ export default function MinkowskiDiagram({
     }
   }
 
+  // Determine which physical frame (S or S') is orthogonal vs tilted
+  const orthoFrame = restFrame === 'S' ? 's' : 'sprime'
+  const tiltedFrame = restFrame === 'S' ? 'sprime' : 's'
+
+  const restXLabel = restFrame === 'S' ? 'x' : "x\u2032"
+  const restCtLabel = restFrame === 'S' ? 'ct' : "ct\u2032"
+  const movingXLabel = restFrame === 'S' ? "x\u2032" : 'x'
+  const movingCtLabel = restFrame === 'S' ? "ct\u2032" : 'ct'
+  const restFrameLabel = restFrame === 'S' ? 'S' : "S\u2032"
+  const movingFrameLabel = restFrame === 'S' ? "S\u2032" : 'S'
+
+  // CSS classes: S is always black/grey, S' is always red
+  const orthoLabelClass = restFrame === 'S' ? 'axis-label' : 'prime-label'
+  const tiltedLabelClass = restFrame === 'S' ? 'prime-label' : 'axis-label'
+  const orthoTickClass = restFrame === 'S' ? 'axis-tick' : 'prime-tick'
+  const tiltedTickClass = restFrame === 'S' ? 'prime-tick' : 'axis-tick'
+  const sCoordRowClass = 'coordinates-row-s'
+  const sPrimeCoordRowClass = 'coordinates-row-sprime'
+
   const xPrimeLabel = positiveAxisLabelPosition(1, beta, 0.35)
   const ctPrimeLabel = positiveAxisLabelPosition(beta, 1, 0.35)
 
   function handlePointHover(point) {
     const transformed = transform({ ct: point.ct, x: point.x, beta })
     setHoveredPointReadout({
-      s: point,
-      sPrime: {
+      rest: point,
+      moving: {
         x: transformed.x,
         ct: transformed.ct,
       },
@@ -137,8 +158,8 @@ export default function MinkowskiDiagram({
     const transformed = transform({ ct: point.ct, x: point.x, beta })
 
     setCursorReadout({
-      s: point,
-      sPrime: {
+      rest: point,
+      moving: {
         x: transformed.x,
         ct: transformed.ct,
       },
@@ -332,7 +353,7 @@ export default function MinkowskiDiagram({
               y1={toSvgY(line.ct1)}
               x2={toSvgX(line.x2)}
               y2={toSvgY(line.ct2)}
-              className={lineClass(line.kind, 's')}
+              className={lineClass(line.kind, orthoFrame)}
             />
           ))}
 
@@ -340,7 +361,7 @@ export default function MinkowskiDiagram({
             <polyline
               key={line.key}
               points={polylinePath(line.points, toSvgX, toSvgY)}
-              className={lineClass(line.kind, 'prime')}
+              className={lineClass(line.kind, tiltedFrame)}
               fill="none"
             />
           ))}
@@ -360,8 +381,8 @@ export default function MinkowskiDiagram({
             className="lightcone"
           />
 
-          <polyline points={polylinePath(xPrime, toSvgX, toSvgY)} className="prime-axis" fill="none" />
-          <polyline points={polylinePath(ctPrime, toSvgX, toSvgY)} className="prime-axis" fill="none" />
+          <polyline points={polylinePath(xPrime, toSvgX, toSvgY)} className={tiltedFrame === 'sprime' ? 'prime-axis' : 'axis'} fill="none" />
+          <polyline points={polylinePath(ctPrime, toSvgX, toSvgY)} className={tiltedFrame === 'sprime' ? 'prime-axis' : 'axis'} fill="none" />
 
           {eventLines.map((line, index) => (
             <line
@@ -440,7 +461,7 @@ export default function MinkowskiDiagram({
         {Array.from({ length: 2 * range + 1 }, (_, index) => index - range)
           .filter((value) => value !== 0)
           .map((value) => (
-            <text key={`x-tick-${value}`} x={toSvgX(value)} y={toSvgY(-0.16)} className="axis-tick x-tick">
+            <text key={`x-tick-${value}`} x={toSvgX(value)} y={toSvgY(-0.16)} className={`${orthoTickClass} x-tick`}>
               {value}
             </text>
           ))}
@@ -448,7 +469,7 @@ export default function MinkowskiDiagram({
         {Array.from({ length: 2 * range + 1 }, (_, index) => index - range)
           .filter((value) => value !== 0)
           .map((value) => (
-            <text key={`ct-tick-${value}`} x={toSvgX(0.16)} y={toSvgY(value)} className="axis-tick ct-tick">
+            <text key={`ct-tick-${value}`} x={toSvgX(0.16)} y={toSvgY(value)} className={`${orthoTickClass} ct-tick`}>
               {value}
             </text>
           ))}
@@ -471,7 +492,7 @@ export default function MinkowskiDiagram({
                 key={`x-prime-tick-${value}`}
                 x={toSvgX(position.x)}
                 y={toSvgY(position.ct)}
-                className="prime-tick x-prime-tick"
+                className={`${tiltedTickClass} x-prime-tick`}
               >
                 {value}
               </text>
@@ -496,7 +517,7 @@ export default function MinkowskiDiagram({
                 key={`ct-prime-tick-${value}`}
                 x={toSvgX(position.x)}
                 y={toSvgY(position.ct)}
-                className="prime-tick ct-prime-tick"
+                className={`${tiltedTickClass} ct-prime-tick`}
               >
                 {value}
               </text>
@@ -507,10 +528,10 @@ export default function MinkowskiDiagram({
           <>
             <rect x={14} y={90} width={334} height={68} rx={8} className="hover-box" />
             <text x={24} y={116} className="hover-text">
-              S: (x, ct) = ({hoveredPointReadout.s.x.toFixed(2)}, {hoveredPointReadout.s.ct.toFixed(2)})
+              {restFrameLabel}: ({restXLabel}, {restCtLabel}) = ({hoveredPointReadout.rest.x.toFixed(2)}, {hoveredPointReadout.rest.ct.toFixed(2)})
             </text>
             <text x={24} y={142} className="hover-text">
-              S′: (x′, ct′) = ({hoveredPointReadout.sPrime.x.toFixed(2)}, {hoveredPointReadout.sPrime.ct.toFixed(2)})
+              {movingFrameLabel}: ({movingXLabel}, {movingCtLabel}) = ({hoveredPointReadout.moving.x.toFixed(2)}, {hoveredPointReadout.moving.ct.toFixed(2)})
             </text>
           </>
         )}
@@ -524,17 +545,17 @@ export default function MinkowskiDiagram({
           </>
         )}
 
-        <text x={toSvgX(range + 0.3)} y={toSvgY(0)} className="axis-label margin-label">
-          x
+        <text x={toSvgX(range + 0.3)} y={toSvgY(0)} className={`${orthoLabelClass} margin-label`}>
+          {restXLabel}
         </text>
-        <text x={toSvgX(0)} y={toSvgY(range + 0.3)} className="axis-label margin-label">
-          ct
+        <text x={toSvgX(0)} y={toSvgY(range + 0.3)} className={`${orthoLabelClass} margin-label`}>
+          {restCtLabel}
         </text>
-        <text x={toSvgX(xPrimeLabel.x)} y={toSvgY(xPrimeLabel.ct)} className="prime-label margin-label">
-          x′
+        <text x={toSvgX(xPrimeLabel.x)} y={toSvgY(xPrimeLabel.ct)} className={`${tiltedLabelClass} margin-label`}>
+          {movingXLabel}
         </text>
-        <text x={toSvgX(ctPrimeLabel.x)} y={toSvgY(ctPrimeLabel.ct)} className="prime-label margin-label">
-          ct′
+        <text x={toSvgX(ctPrimeLabel.x)} y={toSvgY(ctPrimeLabel.ct)} className={`${tiltedLabelClass} margin-label`}>
+          {movingCtLabel}
         </text>
         </svg>
         <div className="export-toolbar">
@@ -570,13 +591,13 @@ export default function MinkowskiDiagram({
         <h2>Coordinates</h2>
         {cursorReadout ? (
           <>
-            <p className="coordinates-row">
-              <span className="coordinates-label">S:</span>
-              <span>(x, ct) = ({cursorReadout.s.x.toFixed(2)}, {cursorReadout.s.ct.toFixed(2)})</span>
+            <p className={`coordinates-row ${restFrame === 'S' ? sCoordRowClass : sPrimeCoordRowClass}`}>
+              <span className="coordinates-label">{restFrameLabel}:</span>
+              <span>({restXLabel}, {restCtLabel}) = ({cursorReadout.rest.x.toFixed(2)}, {cursorReadout.rest.ct.toFixed(2)})</span>
             </p>
-            <p className="coordinates-row coordinates-row-prime">
-              <span className="coordinates-label">S′:</span>
-              <span>(x′, ct′) = ({cursorReadout.sPrime.x.toFixed(2)}, {cursorReadout.sPrime.ct.toFixed(2)})</span>
+            <p className={`coordinates-row ${restFrame === 'S' ? sPrimeCoordRowClass : sCoordRowClass}`}>
+              <span className="coordinates-label">{movingFrameLabel}:</span>
+              <span>({movingXLabel}, {movingCtLabel}) = ({cursorReadout.moving.x.toFixed(2)}, {cursorReadout.moving.ct.toFixed(2)})</span>
             </p>
           </>
         ) : (
