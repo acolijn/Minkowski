@@ -37,6 +37,7 @@ export default function MinkowskiDiagram({
   onDeletePoint,
   onUpdatePoint,
   onUpdateLineEndpoint,
+  children,
 }) {
   const svgRef = useRef(null)
   const [exporting, setExporting] = useState(false)
@@ -587,23 +588,20 @@ export default function MinkowskiDiagram({
         </div>
       </section>
 
-      <aside className="coordinates-panel" aria-live="polite">
-        <h2>Coordinates</h2>
-        {cursorReadout ? (
-          <>
-            <p className={`coordinates-row ${restFrame === 'S' ? sCoordRowClass : sPrimeCoordRowClass}`}>
-              <span className="coordinates-label">{restFrameLabel}:</span>
-              <span>({restXLabel}, {restCtLabel}) = ({cursorReadout.rest.x.toFixed(2)}, {cursorReadout.rest.ct.toFixed(2)})</span>
-            </p>
-            <p className={`coordinates-row ${restFrame === 'S' ? sPrimeCoordRowClass : sCoordRowClass}`}>
-              <span className="coordinates-label">{movingFrameLabel}:</span>
-              <span>({movingXLabel}, {movingCtLabel}) = ({cursorReadout.moving.x.toFixed(2)}, {cursorReadout.moving.ct.toFixed(2)})</span>
-            </p>
-          </>
-        ) : (
-          <p className="coordinates-empty">Move over the diagram</p>
-        )}
-      </aside>
+      <div className="side-panels">
+        <aside className="coordinates-panel" aria-live="polite">
+          <h2>Coordinates</h2>
+          <p className={`coordinates-row ${restFrame === 'S' ? sCoordRowClass : sPrimeCoordRowClass}`}>
+            <span className="coordinates-label">{restFrameLabel}:</span>
+            <span>({restXLabel}, {restCtLabel}) = {cursorReadout ? `(${cursorReadout.rest.x.toFixed(2)}, ${cursorReadout.rest.ct.toFixed(2)})` : '(…, …)'}</span>
+          </p>
+          <p className={`coordinates-row ${restFrame === 'S' ? sPrimeCoordRowClass : sCoordRowClass}`}>
+            <span className="coordinates-label">{movingFrameLabel}:</span>
+            <span>({movingXLabel}, {movingCtLabel}) = {cursorReadout ? `(${cursorReadout.moving.x.toFixed(2)}, ${cursorReadout.moving.ct.toFixed(2)})` : '(…, …)'}</span>
+          </p>
+        </aside>
+        {children}
+      </div>
     </section>
   )
 }

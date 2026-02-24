@@ -5,9 +5,11 @@ export default function ControlsPanel({
   gamma,
   range,
   restFrame,
+  viewMode,
   onBetaChange,
   onRangeChange,
   onFrameToggle,
+  onViewModeChange,
   onClearPoints,
   onClearLines,
   onClearAll,
@@ -54,6 +56,22 @@ export default function ControlsPanel({
       </div>
 
       <div className="control-actions">
+        <div className="view-tabs">
+          <button
+            type="button"
+            className={`view-tab${viewMode === '2d' ? ' view-tab-active' : ''}`}
+            onClick={() => onViewModeChange('2d')}
+          >
+            2D
+          </button>
+          <button
+            type="button"
+            className={`view-tab${viewMode === '3d' ? ' view-tab-active' : ''}`}
+            onClick={() => onViewModeChange('3d')}
+          >
+            3D
+          </button>
+        </div>
         <button type="button" onClick={onClearPoints}>
           Clear points
         </button>
